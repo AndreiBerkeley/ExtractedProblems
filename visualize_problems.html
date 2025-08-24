@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mathematical Problems Viewer</title>
+    
+    <!-- MathJax Configuration -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9fafb;
+            color: #1f2937;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+        }
+        
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .control-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        input[type="text"], input[type="number"], input[type="file"] {
+            flex: 1;
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1rem;
+            min-width: 200px;
+        }
+        
+        button {
+            padding: 0.5rem 1.5rem;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #4338ca;
+        }
+        
+        button.secondary {
+            background: #6b7280;
+        }
+        
+        button.secondary:hover {
+            background: #4b5563;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 0.5rem;
+            background: #e5e7eb;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        
+        .problem-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .problem-header {
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .problem-header h2 {
+            margin: 0 0 0.5rem 0;
+            color: #1f2937;
+        }
+        
+        .metadata {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .metadata span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .section {
+            margin-bottom: 2rem;
+        }
+        
+        .section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .section h3 {
+            color: #374151;
+            margin-bottom: 1rem;
+        }
+        
+        .section-content {
+            line-height: 1.8;
+            color: #374151;
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .math-display {
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+        
+        #drop-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s;
+            margin-bottom: 1rem;
+        }
+        
+        #drop-zone.drag-over {
+            border-color: #4f46e5;
+            background: #eff6ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Mathematical Problems Viewer</h1>
+        <p>View and navigate through mathematical problems with LaTeX rendering</p>
+    </div>
+    
+    <div class="controls">
+        <div id="drop-zone">
+            <p>Drag and drop your JSONL file here or use the file picker below</p>
+        </div>
+        <div class="control-row">
+            <input type="file" id="file-input" accept=".jsonl">
+            <button onclick="loadDefaultFile()">Load pairs.jsonl</button>
+        </div>
+        <div class="control-row">
+            <input type="text" id="search-box" placeholder="Search by ID or content...">
+            <button onclick="searchProblem()">Search</button>
+        </div>
+        <div class="control-row">
+            <input type="number" id="problem-number" min="1" placeholder="Go to problem #">
+            <button onclick="goToProblem()">Go</button>
+        </div>
+    </div>
+    
+    <div id="status" class="status">No file loaded</div>
+    
+    <div id="problem-display" class="problem-container hidden">
+        <div class="problem-header">
+            <h2 id="problem-id"></h2>
+            <div class="metadata">
+                <span><strong>Contest:</strong> <span id="contest"></span></span>
+                <span><strong>Year:</strong> <span id="year"></span></span>
+                <span><strong>Problem #:</strong> <span id="problem-num"></span></span>
+                <span id="source-pdf-container"><strong>Source:</strong> <span id="source-pdf"></span></span>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>Problem</h3>
+            <div id="problem-content" class="section-content"></div>
+        </div>
+        
+        <div class="section">
+            <h3>Solution</h3>
+            <div id="solution-content" class="section-content"></div>
+        </div>
+    </div>
+    
+    <div class="navigation hidden" id="navigation">
+        <button onclick="navigate('first')">⏮️ First</button>
+        <button onclick="navigate('prev')">◀️ Previous</button>
+        <button onclick="navigate('next')" class="primary">Next ▶️</button>
+        <button onclick="navigate('last')">Last ⏭️</button>
+    </div>
+    
+    <script>
+        let problems = [];
+        let currentIndex = 0;
+        
+        // Setup drag and drop
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.jsonl')) {
+                loadFile(file);
+            } else {
+                alert('Please drop a JSONL file');
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                loadFile(file);
+            }
+        });
+        
+        function loadFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    problems = [];
+                    const lines = e.target.result.split('\n');
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            problems.push(JSON.parse(line));
+                        }
+                    }
+                    if (problems.length > 0) {
+                        currentIndex = 0;
+                        displayProblem(0);
+                        document.getElementById('problem-display').classList.remove('hidden');
+                        document.getElementById('navigation').classList.remove('hidden');
+                        updateStatus();
+                    }
+                } catch (error) {
+                    alert('Error parsing JSONL file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function loadDefaultFile() {
+            fetch('pairs.jsonl')
+                .then(response => response.text())
+                .then(data => {
+                    problems = [];
+                    const lines = data.split('\n');
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            problems.push(JSON.parse(line));
+                        }
+                    }
+                    if (problems.length > 0) {
+                        currentIndex = 0;
+                        displayProblem(0);
+                        document.getElementById('problem-display').classList.remove('hidden');
+                        document.getElementById('navigation').classList.remove('hidden');
+                        updateStatus();
+                    }
+                })
+                .catch(error => {
+                    alert('Could not load pairs.jsonl: ' + error.message);
+                });
+        }
+        
+        function convertMathDelimiters(text) {
+            if (!text) return '';
+            
+            // Replace \( and \) with $
+            text = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$');
+            
+            // Replace \[ and \] with $$
+            text = text.replace(/\\\[/g, '\n$$\n').replace(/\\\]/g, '\n$$\n');
+            
+            // Clean up multiple newlines
+            text = text.replace(/\n{3,}/g, '\n\n');
+            
+            return text;
+        }
+        
+        function displayProblem(index) {
+            if (index < 0 || index >= problems.length) return;
+            
+            const problem = problems[index];
+            currentIndex = index;
+            
+            // Update metadata
+            document.getElementById('problem-id').textContent = problem.id || 'Unknown ID';
+            document.getElementById('contest').textContent = problem.contest || 'Unknown';
+            document.getElementById('year').textContent = problem.year || 'Unknown';
+            document.getElementById('problem-num').textContent = problem.problem_number || 'Unknown';
+            
+            if (problem.source_pdf) {
+                document.getElementById('source-pdf').textContent = problem.source_pdf;
+                document.getElementById('source-pdf-container').style.display = 'flex';
+            } else {
+                document.getElementById('source-pdf-container').style.display = 'none';
+            }
+            
+            // Update problem and solution content
+            const problemText = convertMathDelimiters(problem.problem || 'No problem text available');
+            const solutionText = convertMathDelimiters(problem.solution || 'No solution available');
+            
+            document.getElementById('problem-content').innerHTML = problemText;
+            document.getElementById('solution-content').innerHTML = solutionText;
+            
+            // Re-render math
+            MathJax.typesetPromise();
+            
+            updateStatus();
+        }
+        
+        function navigate(direction) {
+            let newIndex = currentIndex;
+            
+            switch(direction) {
+                case 'first':
+                    newIndex = 0;
+                    break;
+                case 'last':
+                    newIndex = problems.length - 1;
+                    break;
+                case 'prev':
+                    newIndex = Math.max(0, currentIndex - 1);
+                    break;
+                case 'next':
+                    newIndex = Math.min(problems.length - 1, currentIndex + 1);
+                    break;
+            }
+            
+            displayProblem(newIndex);
+        }
+        
+        function searchProblem() {
+            const searchTerm = document.getElementById('search-box').value.toLowerCase();
+            if (!searchTerm) return;
+            
+            for (let i = 0; i < problems.length; i++) {
+                const problem = problems[i];
+                if ((problem.id && problem.id.toLowerCase().includes(searchTerm)) ||
+                    (problem.problem && problem.problem.toLowerCase().includes(searchTerm)) ||
+                    (problem.solution && problem.solution.toLowerCase().includes(searchTerm))) {
+                    displayProblem(i);
+                    return;
+                }
+            }
+            
+            alert('No match found');
+        }
+        
+        function goToProblem() {
+            const problemNum = parseInt(document.getElementById('problem-number').value);
+            if (problemNum >= 1 && problemNum <= problems.length) {
+                displayProblem(problemNum - 1);
+            } else {
+                alert(`Please enter a number between 1 and ${problems.length}`);
+            }
+        }
+        
+        function updateStatus() {
+            document.getElementById('status').textContent = 
+                `Problem ${currentIndex + 1} of ${problems.length}`;
+        }
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (problems.length === 0) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    navigate('prev');
+                    break;
+                case 'ArrowRight':
+                    navigate('next');
+                    break;
+                case 'Home':
+                    navigate('first');
+                    break;
+                case 'End':
+                    navigate('last');
+                    break;
+            }
+        });
+        
+        // Enter key for search and go to problem
+        document.getElementById('search-box').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchProblem();
+        });
+        
+        document.getElementById('problem-number').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') goToProblem();
+        });
+    </script>
+</body>
+</html> 
